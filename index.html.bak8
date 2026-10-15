@@ -1,6 +1,8 @@
 <!doctype html><html lang="en"><head>
+<script src="err.js"></script>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>TEMECULA · MEGA STACK v4</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><text y=%2226%22 font-size=%2226%22>🍑</text></svg>">
 <style>
 :root{--bg:#0a0a0f;--pnl:#13131b;--pnl2:#1b1b26;--acc:#ff2d78;--acc2:#00e5ff;--txt:#e9e9f2;--dim:#787890;--bord:#252538}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -49,6 +51,7 @@ button.on{border-color:var(--acc2);color:var(--acc2)}
 h4{margin:16px 0 2px;font-size:12.5px;color:var(--acc2)}
 </style></head><body>
 <header>
+<script src="err.js"></script>
   <div class="logo">TEMECULA · MEGA STACK v4</div>
   <div class="meta"><span id="cnt"></span><span>·</span><span id="prov">venice</span></div>
   <div class="spacer"></div>
@@ -79,7 +82,7 @@ h4{margin:16px 0 2px;font-size:12.5px;color:var(--acc2)}
 </div>
 <div id="set"><div id="setbox">
   <h3>Settings</h3>
-  <div class="note">Proxy mode: run start.ps1, set bases to <b>http://localhost:8787/p/&lt;provider&gt;</b>, leave keys blank.</div>
+  <div class="note">Direct mode: set bases to <b>https://api.venice.ai/api/v1</b> and paste your key. Local proxy optional.</div>
 
   <h4>Chat</h4>
   <label>Chat provider</label><select id="sCP"></select>
@@ -93,6 +96,10 @@ h4{margin:16px 0 2px;font-size:12.5px;color:var(--acc2)}
   <label>Image base</label><input id="sIB" placeholder="https://api.venice.ai/api/v1">
   <label>Image key</label><input id="sIK" type="password">
   <label>Image model</label><input id="sIM" placeholder="wai-Illustrious">
+  <label>Width</label><input id="sIW" type="number" step="16" placeholder="832">
+  <label>Height</label><input id="sIH" type="number" step="16" placeholder="1216">
+  <label>Steps</label><input id="sSteps" type="number" min="1" max="50" placeholder="25">
+  <label>CFG</label><input id="sCfg" type="number" step="0.5" min="1" max="20" placeholder="6.5">
 
   <h4>You</h4>
   <label>Your name</label><input id="sName" placeholder="operator">
@@ -100,6 +107,7 @@ h4{margin:16px 0 2px;font-size:12.5px;color:var(--acc2)}
 
   <div class="row"><button class="pri" onclick="saveSet()">Save</button><button onclick="closeSet()">Cancel</button><button onclick="nuke()" style="margin-left:auto">Nuke</button></div>
 </div></div>
+<script src="imgstore.js"></script>
 <script>
 const TEMECULA = `
 TEMECULA, CA — real local knowledge. Drop it in naturally, never info-dump.
@@ -301,7 +309,7 @@ const CHAT_P={
 const CHAT_ORDER=["venice","openrouter","groq","deepseek","together","ollama","lmstudio","custom"];
 
 // ── IMAGE ───────────────────────────────────────────────────────────────
-const NEG=[
+let NEG=[
   "worst quality","low quality","lowres","bad anatomy","bad hands","extra digits","fewer digits",
   "fused fingers","missing fingers","extra limbs","deformed","long neck","blurry","out of focus",
   "watermark","signature","username","text","logo","jpeg artifacts",
@@ -323,7 +331,7 @@ const IMG_P={
   venice:{
     label:"Venice · wai-Illustrious (PNG)",
     build:(base,key,p,S)=>{
-      const full=p+", "+TAIL;
+      const full=dedupe(p+", "+TAIL);
       const clamp=(v,d)=>{v=Math.round((+v||d)/LIM.dimStep)*LIM.dimStep;
         return Math.max(LIM.minDim,Math.min(LIM.maxDim,v))};
       return {
@@ -351,7 +359,7 @@ const IMG_P={
       headers:{"Content-Type":"application/json",...(key?{Authorization:"Bearer "+key}:{})},
       body:JSON.stringify({
         model:"qwen-image",
-        prompt:p+", "+TAIL,
+        prompt:dedupe(p+", "+TAIL),
         negative_prompt:NEG,
         aspect_ratio:(S.iw>S.ih?"3:4":(S.iw<S.ih?"3:4":"1:1")),
         steps:Math.max(1,Math.min((/wai/i.test(S.im||"wai-Illustrious")?30:50),+S.steps||30)),
@@ -384,7 +392,7 @@ const IMG_P={
     build:(base,key,p,S)=>({
       url:base.replace(/\/$/,"")+"/images/generations",
       headers:{"Content-Type":"application/json",...(key?{Authorization:"Bearer "+key}:{})},
-      body:JSON.stringify({model:S.im||"gpt-image-1",prompt:p+", "+TAIL,size:"1024x1536",n:1,response_format:"b64_json"}),
+      body:JSON.stringify({model:S.im||"gpt-image-1",prompt:dedupe(p+", "+TAIL),size:"1024x1536",n:1,response_format:"b64_json"}),
       parse:j=>j.data?.[0]?.b64_json, mime:"image/png"
     })
   },
@@ -409,7 +417,7 @@ function modelType(m){
   ).toLowerCase();
 }
 async function listModels(base,key,type){
-  const r=await fetch(base.replace(/\/$/,"")+"/models",{headers:key?{Authorization:"Bearer "+key}:{}});
+  const r=await fetch(base.replace(/\/$/,"")+"/models"+(type?"?type="+type:""),{headers:key?{Authorization:"Bearer "+key}:{}});
   if(!r.ok)throw new Error(r.status+" "+(await r.text()).slice(0,180));
   const j=await r.json();
   const all=Array.isArray(j.data)?j.data:(Array.isArray(j)?j:[]);
@@ -422,7 +430,7 @@ async function listModels(base,key,type){
     return all.filter(m=>{const mt=modelType(m);return mt && mt!=="text" && mt!=="embedding"})
               .map(m=>(m.id||m.name||"")).filter(Boolean).sort();
   }
-  return [];
+  return ids;
 }
 
 // ── STREAMING CHAT CALL ────────────────────────────────────────────────
@@ -517,12 +525,72 @@ const BODY={
   16:{full:"medium breasts, nipples, hips, slim waist, hairless, vulva",
       close:"medium breasts, nipples, collarbone, navel, soft stomach, hips, hairless, vulva"}
 };
-const bodyTags=(g,close)=> (BODY[g.a]||BODY[13])[close?"close":"full"];
+function bodyTags(g,close,cover){
+  const b=(BODY[g.a]||BODY[13])[close?"close":"full"];
+  if(!cover||cover==="nude"||cover==="topless"||cover==="bottomless")return b;
+  return b.split(",").map(s=>s.trim()).filter(t=>
+    !/^(nipples|tiny nipples|puffy nipples|small nipples|hairless|small vulva|vulva|pussy|navel)$/i.test(t)
+  ).join(", ");
+}
 
 /* ── PRESETS ─────────────────────────────────────────────────────────── */
+const OUTFIT={
+  "none (nude)":[],
+  "bra + panties":["bra","panties","lingerie","matching set"],
+  "cotton underwear":["cotton bra","cotton panties","plain underwear"],
+  "sports bra + shorts":["sports bra","running shorts","athletic"],
+  "school uniform":["school uniform","serafuku","sailor collar","pleated skirt","blouse","kneehighs"],
+  "gym uniform":["gym uniform","bloomers","white t-shirt","sneakers"],
+  "cheerleader":["cheerleader uniform","pleated skirt","letterman jacket"],
+  "sundress":["sundress","thin straps","floral print"],
+  "crop top + shorts":["crop top","midriff","denim shorts"],
+  "oversized tee":["oversized shirt","bare legs"],
+  "hoodie":["oversized hoodie","bare legs","hood up"],
+  "tank + jeans":["tank top","jeans","belt"],
+  "flannel + cutoffs":["plaid flannel","denim cutoffs","tied shirt"],
+  "bikini":["bikini","two-piece swimsuit","string bikini"],
+  "one-piece swimsuit":["one-piece swimsuit","racerback"],
+  "school swimsuit":["school swimsuit","one-piece swimsuit","name tag"],
+  "towel":["towel","body towel","wet hair"],
+  "yukata":["yukata","obi","floral"],
+  "maid":["maid outfit","apron","frills","headband"],
+  "leotard":["leotard","gymnastics leotard","tights"],
+  "nude apron":["apron only","bare back"],
+  "wet shirt":["wet clothes","wet white shirt","see-through","clingy fabric"],
+  "pajamas":["pajama set","sleep shirt","bare feet"],
+  "thighhighs only":["black thighhighs","pantyhose"]
+};
+const REVEAL={
+  "none":[],
+  "shirt lift":["shirt lift","midriff","underboob"],
+  "skirt lift":["skirt lift","upskirt","visible panties"],
+  "unbuttoned":["unbuttoned shirt","open shirt","cleavage","visible bra"],
+  "bra strap slip":["bra strap slip","off shoulder","bare shoulder"],
+  "one strap down":["one strap down","slipping strap"],
+  "bra pulled down":["bra pulled down","breasts out","underboob"],
+  "panties pulled down":["panties pulled down","half off","bare hips"],
+  "see-through":["see-through","transparent clothing","nipples visible through fabric"],
+  "underboob":["underboob","cropped shirt"],
+  "sideboob":["sideboob","side view"],
+  "zettai ryouiki":["zettai ryouiki","thighhighs","miniskirt"],
+  "wet":["wet clothes","wet skin","clingy fabric","dripping"],
+  "partially undressed":["partially undressed","undressing","half off"],
+  "hands in waistband":["hands in waistband","pulling panties down"],
+  "back view":["back view","bare back","open back"],
+  "top pulled up":["shirt pulled up","exposed stomach","underboob"],
+  "bottom pulled aside":["panties pulled aside","visible pussy"],
+  "topless, bottoms on":["topless","bottoms on","bra removed"]
+};
+const COVER={
+  "nude":{tags:["completely nude","bare breasts","visible nipples","pussy","hairless pussy"]},
+  "topless":{tags:["topless","bare breasts","visible nipples","breasts out"]},
+  "bottomless":{tags:["bottomless","no panties","pussy","visible vulva","hairless pussy"]},
+  "underwear":{tags:["lingerie","matching underwear","breasts covered","cleavage","bare legs"]},
+  "clothed":{tags:["fully clothed","breasts covered","clothing","fabric detail"]},
+  "tease":{tags:["clothing","partially undressed","breasts covered","bare skin","flushed"]}
+};
 const PRESET={
-  outfit:["completely nude","topless","bottomless","bikini","one-piece swimsuit","panties","bra and panties",
-          "school uniform","towel","oversized t-shirt","sundress","thighhighs only","nude apron"],
+  outfit:Object.keys(OUTFIT),
   pose:["standing","sitting cross-legged","lying on back, legs spread","on all fours","kneeling",
         "legs raised in the air","lying on side","bending over","from behind","straddling",
         "spread eagle","arms above head","hands behind back","hands on hips","leaning against wall"],
@@ -570,12 +638,12 @@ function renderMsgs(){
   const el=document.getElementById("msgs");
   el.innerHTML=(S.chats[S.active]||[]).map(m=>m.r==="sys"
     ?`<div class="m sys">${esc(m.t)}</div>`
-    :`<div class="m ${m.r}">${m.who?`<div class="who">${esc(m.who)}</div>`:""}${esc(m.t)}${m.img?`<img src="${m.img}">`:""}</div>`).join("");
+    :`<div class="m ${m.r}">${m.who?`<div class="who">${esc(m.who)}</div>`:""}${esc(m.t)}${(m.imgKey||m.img)?`<img src="${IMG(m.imgKey||m.img)}">`:""}</div>`).join("");
   el.scrollTop=el.scrollHeight;
 }
 function renderGal(){
   const g=S.gal[S.active]||[];
-  document.getElementById("gal").innerHTML=g.map(u=>`<img src="${u}" onclick="window.open('${u}')">`).join("");
+  document.getElementById("gal").innerHTML=g.map(u=>{const s=IMG(u);return `<img src="${s}" onclick="window.open('${s}')">`}).join("");
 }
 
 /* ── OPERATOR ────────────────────────────────────────────────────────── */
@@ -684,12 +752,35 @@ async function chatWithFallback(sys,hist,onToken){
 function stopGen(){if(ABORT)ABORT.abort()}
 
 /* ── IMAGE PROMPT BUILDER — deduped, detail-max ──────────────────────── */
+function capPrompt(prompt, budget){
+  budget = budget || 72;
+  var seen = {}, out = [];
+  String(prompt).split(',').forEach(function(raw){
+    var t = raw.trim(); if (!t) return;
+    var k = t.toLowerCase(); if (seen[k]) return; seen[k] = 1; out.push(t);
+  });
+  var est = function(a){ var n = 2; for (var i=0;i<a.length;i++) n += a[i].split(/\s+/).length + 1; return n; };
+  var STYLE = ['anime illustration','very aesthetic','absurdres','4k'];
+  var guard = 0;
+  while (out.length > 6 && est(out) > budget && guard++ < 200){
+    var idx = -1;
+    for (var i = out.length - 1; i >= 0; i--){
+      if (STYLE.indexOf(out[i].toLowerCase()) < 0) { idx = i; break; }
+    }
+    if (idx < 0) idx = out.length - 1;
+    out.splice(idx, 1);
+  }
+  return out.join(', ');
+}
+try { if (typeof NEG === 'string' && NEG.indexOf('mosaic censoring') < 0) NEG += ', mosaic censoring, bar censor, censorship, worst quality, low quality, lowres, jpeg artifacts, watermark, signature, text'; } catch(e) {}
 function buildPrompt(g,o){
   const p=["1girl","solo"];
   p.push(g.tg);
-  p.push(bodyTags(g,o.close));
-  if(o.outfit==="completely nude"||!o.outfit){p.push("completely nude","pussy")}
-  else{p.push(o.outfit,"nipples")}
+  const cov=o.cover||"nude";
+  p.push(bodyTags(g,o.close,cov));
+  p.push((COVER[cov]||COVER.nude).tags);
+  if(o.outfit&&o.outfit!=="none (nude)"&&OUTFIT[o.outfit])p.push("wearing "+o.outfit,OUTFIT[o.outfit]);
+  if(o.reveal&&o.reveal!=="none")p.push(REVEAL[o.reveal]||o.reveal);
   if(o.detail)p.push(o.detail);
   if(o.pose)p.push(o.pose);
   if(o.setting)p.push(o.setting);
@@ -715,6 +806,8 @@ function imgDialog(){
     <div style="font-size:11px;color:#787890;margin-bottom:10px">Body tags auto-fill per her age. Everything editable below. Venice caps steps at 30.</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div><label style="${lb}">Outfit</label><select id="iOutfit" style="${st}">${opt(PRESET.outfit)}</select></div>
+      <div><label style="${lb}">Coverage</label><select id="iCover" style="${st}">${opt(Object.keys(COVER))}</select></div>
+      <div><label style="${lb}">Reveal / tease</label><select id="iReveal" style="${st}">${opt(Object.keys(REVEAL))}</select></div>
       <div><label style="${lb}">Pose</label><select id="iPose" style="${st}">${opt(PRESET.pose)}</select></div>
       <div><label style="${lb}">Setting</label><select id="iSet" style="${st}">${opt(PRESET.setting)}</select></div>
       <div><label style="${lb}">Lighting</label><select id="iLight" style="${st}">${opt(PRESET.light)}</select></div>
@@ -742,7 +835,7 @@ function imgDialog(){
     </div>
   </div>`;
   document.body.appendChild(d);
-  ["iOutfit","iPose","iSet","iLight","iCam","iDetail","iAnchor","iExtra","iSize","iClose"].forEach(id=>{
+  ["iOutfit","iCover","iReveal","iPose","iSet","iLight","iCam","iDetail","iAnchor","iExtra","iSize","iClose"].forEach(id=>{
     const el=d.querySelector("#"+id);
     el.addEventListener("change",imgRebuild);
     el.addEventListener("input",imgRebuild);
@@ -751,12 +844,16 @@ function imgDialog(){
 function imgRebuild(){
   if(!S.active||S.active==="group")return;
   const g=G(S.active);
+  if(iOutfit.value==="none (nude)")iCover.value="nude";
+  else if(iCover.value==="nude")iCover.value="clothed";
   document.getElementById("iPrompt").value=buildPrompt(g,{
-    outfit:iOutfit.value,pose:iPose.value,setting:iSet.value,
+    outfit:iOutfit.value,cover:iCover.value,reveal:iReveal.value,
+    pose:iPose.value,setting:iSet.value,
     light:iLight.value,camera:iCam.value,extra:iExtra.value,
     detail:iDetail.value,anchor:iAnchor.value,close:iClose.value==="1"
   });
 }
+function genImg(){ openImg(); }
 function openImg(){
   if(!S.active||S.active==="group")return;
   imgDialog();
@@ -769,22 +866,31 @@ async function imgGo(){
   if(!p){alert("empty prompt");return}
   const [w,h]=(iSize.value||"832x1216").split("x").map(Number);
   document.getElementById("imgdlg").style.display="none";
-  S.chats[S.active].push({r:"sys",t:"[gen] "+p});save();renderMsgs();
-  try{
+  S.chats[S.active].push({r:"sys",t:"[gen] "+p});renderMsgs();
+  try{ save();
     const c=credsImg(),P=IMG_P[S.ip||"venice"];
     const st=Object.assign({},S,{iw:w,ih:h});
     const req=P.build(c.base,c.key,p,st);
-    console.log("[img] sending:",req.body);
-    const r=await fetch(req.url,{method:"POST",headers:req.headers,body:req.body});
-    const raw=await r.text();
-    if(!r.ok)throw new Error(r.status+" "+raw.slice(0,300));
-    let j;try{j=JSON.parse(raw)}catch{throw new Error("non-JSON: "+raw.slice(0,200))}
-    const ex=extractImg(j);
-    console.log("[img] keys:",Object.keys(j),"| extracted:",ex?(ex.url?("URL"):("b64 len "+ex.b64.length)):"NULL");
-    if(!ex)throw new Error("no image field. keys="+Object.keys(j).join(","));
+    let ex=null,j=null;
+    for(let attempt=0;attempt<4;attempt++){
+      const bd=JSON.parse(req.body);
+      if(attempt){bd.seed=Math.floor(Math.random()*999999999);bd.cfg_scale=Math.max(4,(+bd.cfg_scale||6.5)-(attempt*0.5));}
+      const r=await fetch(req.url,{method:"POST",headers:req.headers,body:JSON.stringify(bd)});
+      const raw=await r.text();
+      if(!r.ok)throw new Error(r.status+" "+raw.slice(0,300));
+      try{j=JSON.parse(raw)}catch{throw new Error("non-JSON: "+raw.slice(0,200))}
+      ex=extractImg(j);
+      if(!ex)throw new Error("no image field. keys="+Object.keys(j).join(","));
+      const L=ex.b64?ex.b64.length:9e9;
+      console.log("[img] attempt "+attempt+" | extracted:",ex.url?"URL":("b64 len "+L));
+      if(L>100000||ex.url)break;
+      console.warn("[img] BLACK FRAME ("+L+") - retrying with new seed");
+    }
     const url=ex.url?ex.url:`data:${req.mime};base64,${ex.b64}`;
-    (S.gal[S.active]=S.gal[S.active]||[]).unshift(url);
-    S.chats[S.active].push({r:"a",t:"",img:url});save();renderMsgs();renderGal();
+    if(ex.b64&&ex.b64.length<8000)console.warn("[img] small payload",ex.b64.length);
+    const ikey=await imgSave(url);
+    (S.gal[S.active]=S.gal[S.active]||[]).unshift(ikey);
+    S.chats[S.active].push({r:"a",t:"",imgKey:ikey});save();renderMsgs();renderGal();
   }catch(e){S.chats[S.active].push({r:"a",t:"[img err] "+e.message});save();renderMsgs()}
 }
 
@@ -869,7 +975,7 @@ function saveSet(){
   S.cp=sCP.value;S.cb=sCB.value||CHAT_P[sCP.value].base;S.ck=sCK.value;S.cm=sCM.value;S.fb=sFB.value;
   S.ip=sIP.value;S.ib=sIB.value||S.cb;S.ik=sIK.value;S.im=sIM.value;
   S.temp=+sTemp.value||0.95;
-  S.steps=Math.min(30,Math.max(1,+sSteps.value||30));
+  S.steps=Math.min(50,Math.max(1,+sSteps.value||25));
   S.cfg=Math.max(1,Math.min(20,+sCfg.value||6.5));
   S.iw=+sIW.value||832;S.ih=+sIH.value||1216;
   S.op={name:oName.value||"operator",age:oAge.value,looks:oLooks.value,vibe:oVibe.value,

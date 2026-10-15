@@ -1,4 +1,5 @@
 <!doctype html><html lang="en"><head>
+<script src="err.js"></script>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>TEMECULA · MEGA STACK v4</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><text y=%2226%22 font-size=%2226%22>🍑</text></svg>">
@@ -50,6 +51,7 @@ button.on{border-color:var(--acc2);color:var(--acc2)}
 h4{margin:16px 0 2px;font-size:12.5px;color:var(--acc2)}
 </style></head><body>
 <header>
+<script src="err.js"></script>
   <div class="logo">TEMECULA · MEGA STACK v4</div>
   <div class="meta"><span id="cnt"></span><span>·</span><span id="prov">venice</span></div>
   <div class="spacer"></div>
@@ -307,7 +309,7 @@ const CHAT_P={
 const CHAT_ORDER=["venice","openrouter","groq","deepseek","together","ollama","lmstudio","custom"];
 
 // ── IMAGE ───────────────────────────────────────────────────────────────
-const NEG=[
+let NEG=[
   "worst quality","low quality","lowres","bad anatomy","bad hands","extra digits","fewer digits",
   "fused fingers","missing fingers","extra limbs","deformed","long neck","blurry","out of focus",
   "watermark","signature","username","text","logo","jpeg artifacts",
@@ -770,9 +772,7 @@ function capPrompt(prompt, budget){
   }
   return out.join(', ');
 }
-if (typeof NEG === 'string' && NEG.indexOf('mosaic censoring') < 0) {
-  NEG += ', mosaic censoring, bar censor, censorship, worst quality, low quality, lowres, jpeg artifacts, watermark, signature, text';
-}
+try { if (typeof NEG === 'string' && NEG.indexOf('mosaic censoring') < 0) NEG += ', mosaic censoring, bar censor, censorship, worst quality, low quality, lowres, jpeg artifacts, watermark, signature, text'; } catch(e) {}
 function buildPrompt(g,o){
   const p=["1girl","solo"];
   p.push(g.tg);
@@ -853,6 +853,7 @@ function imgRebuild(){
     detail:iDetail.value,anchor:iAnchor.value,close:iClose.value==="1"
   });
 }
+function genImg(){ openImg(); }
 function openImg(){
   if(!S.active||S.active==="group")return;
   imgDialog();
