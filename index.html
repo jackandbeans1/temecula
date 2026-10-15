@@ -79,7 +79,7 @@ h4{margin:16px 0 2px;font-size:12.5px;color:var(--acc2)}
 </div>
 <div id="set"><div id="setbox">
   <h3>Settings</h3>
-  <div class="note">Proxy mode: run start.ps1, set bases to <b>http://localhost:8787/p/&lt;provider&gt;</b>, leave keys blank.</div>
+  <div class="note">Direct mode: set bases to <b>https://api.venice.ai/api/v1</b> and paste your key. Local proxy optional.</div>
 
   <h4>Chat</h4>
   <label>Chat provider</label><select id="sCP"></select>
@@ -93,6 +93,10 @@ h4{margin:16px 0 2px;font-size:12.5px;color:var(--acc2)}
   <label>Image base</label><input id="sIB" placeholder="https://api.venice.ai/api/v1">
   <label>Image key</label><input id="sIK" type="password">
   <label>Image model</label><input id="sIM" placeholder="wai-Illustrious">
+  <label>Width</label><input id="sIW" type="number" step="16" placeholder="832">
+  <label>Height</label><input id="sIH" type="number" step="16" placeholder="1216">
+  <label>Steps</label><input id="sSteps" type="number" min="1" max="50" placeholder="25">
+  <label>CFG</label><input id="sCfg" type="number" step="0.5" min="1" max="20" placeholder="6.5">
 
   <h4>You</h4>
   <label>Your name</label><input id="sName" placeholder="operator">
@@ -869,7 +873,7 @@ function saveSet(){
   S.cp=sCP.value;S.cb=sCB.value||CHAT_P[sCP.value].base;S.ck=sCK.value;S.cm=sCM.value;S.fb=sFB.value;
   S.ip=sIP.value;S.ib=sIB.value||S.cb;S.ik=sIK.value;S.im=sIM.value;
   S.temp=+sTemp.value||0.95;
-  S.steps=Math.min(30,Math.max(1,+sSteps.value||30));
+  S.steps=Math.min(50,Math.max(1,+sSteps.value||25));
   S.cfg=Math.max(1,Math.min(20,+sCfg.value||6.5));
   S.iw=+sIW.value||832;S.ih=+sIH.value||1216;
   S.op={name:oName.value||"operator",age:oAge.value,looks:oLooks.value,vibe:oVibe.value,
