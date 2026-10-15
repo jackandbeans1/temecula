@@ -1,19 +1,16 @@
-﻿param([int]$Port=8787,[switch]$Open)
+param([int]$Port=8787,[switch]$Open)
 $ErrorActionPreference='Stop'
 $root = if($PSScriptRoot){$PSScriptRoot}else{$PWD.Path}
 (Get-NetTCPConnection -LocalPort $Port -State Listen -EA 0).OwningProcess |
   Select-Object -Unique | ForEach-Object { Stop-Process -Id $_ -Force -EA 0 }
 $L = New-Object Net.HttpListener
 $L.Prefixes.Add("http://localhost:$Port/")
-try { $L.Start() } catch {
-  "listener blocked - run: netsh http add urlacl url=http://localhost:$Port/ user=$env:USERNAME"
-  throw
-}
+$L.Start()
 $mime = @{ '.html'='text/html; charset=utf-8'; '.js'='application/javascript; charset=utf-8';
            '.css'='text/css'; '.json'='application/json'; '.png'='image/png';
            '.jpg'='image/jpeg'; '.jpeg'='image/jpeg'; '.webp'='image/webp';
            '.svg'='image/svg+xml'; '.ico'='image/x-icon' }
-"serving $root  ->  http://localhost:$Port/"
+Write-Host "serving $root -> http://localhost:$Port/"
 if ($Open) { Start-Process "http://localhost:$Port/" }
 while ($L.IsListening) {
   $c = $L.GetContext()

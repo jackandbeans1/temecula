@@ -523,12 +523,73 @@ const BODY={
   16:{full:"medium breasts, nipples, hips, slim waist, hairless, vulva",
       close:"medium breasts, nipples, collarbone, navel, soft stomach, hips, hairless, vulva"}
 };
-const bodyTags=(g,close)=> (BODY[g.a]||BODY[13])[close?"close":"full"];
+function bodyTags(g,close,cover){
+  const b=(BODY[g.a]||BODY[13])[close?"close":"full"];
+  if(!cover||cover==="nude"||cover==="topless"||cover==="bottomless")return b;
+  return b.split(",").map(s=>s.trim()).filter(t=>
+    !/^(nipples|tiny nipples|puffy nipples|small nipples|hairless|small vulva|vulva|pussy|navel)$/i.test(t)
+  ).join(", ");
+}
 
 /* ── PRESETS ─────────────────────────────────────────────────────────── */
+PLACEHOLDER_LIB
+const OUTFIT={
+  "none (nude)":[],
+  "bra + panties":["bra","panties","lingerie","matching set"],
+  "cotton underwear":["cotton bra","cotton panties","plain underwear"],
+  "sports bra + shorts":["sports bra","running shorts","athletic"],
+  "school uniform":["school uniform","serafuku","sailor collar","pleated skirt","blouse","kneehighs"],
+  "gym uniform":["gym uniform","bloomers","white t-shirt","sneakers"],
+  "cheerleader":["cheerleader uniform","pleated skirt","letterman jacket"],
+  "sundress":["sundress","thin straps","floral print"],
+  "crop top + shorts":["crop top","midriff","denim shorts"],
+  "oversized tee":["oversized shirt","bare legs"],
+  "hoodie":["oversized hoodie","bare legs","hood up"],
+  "tank + jeans":["tank top","jeans","belt"],
+  "flannel + cutoffs":["plaid flannel","denim cutoffs","tied shirt"],
+  "bikini":["bikini","two-piece swimsuit","string bikini"],
+  "one-piece swimsuit":["one-piece swimsuit","racerback"],
+  "school swimsuit":["school swimsuit","one-piece swimsuit","name tag"],
+  "towel":["towel","body towel","wet hair"],
+  "yukata":["yukata","obi","floral"],
+  "maid":["maid outfit","apron","frills","headband"],
+  "leotard":["leotard","gymnastics leotard","tights"],
+  "nude apron":["apron only","bare back"],
+  "wet shirt":["wet clothes","wet white shirt","see-through","clingy fabric"],
+  "pajamas":["pajama set","sleep shirt","bare feet"],
+  "thighhighs only":["black thighhighs","pantyhose"]
+};
+const REVEAL={
+  "none":[],
+  "shirt lift":["shirt lift","midriff","underboob"],
+  "skirt lift":["skirt lift","upskirt","visible panties"],
+  "unbuttoned":["unbuttoned shirt","open shirt","cleavage","visible bra"],
+  "bra strap slip":["bra strap slip","off shoulder","bare shoulder"],
+  "one strap down":["one strap down","slipping strap"],
+  "bra pulled down":["bra pulled down","breasts out","underboob"],
+  "panties pulled down":["panties pulled down","half off","bare hips"],
+  "see-through":["see-through","transparent clothing","nipples visible through fabric"],
+  "underboob":["underboob","cropped shirt"],
+  "sideboob":["sideboob","side view"],
+  "zettai ryouiki":["zettai ryouiki","thighhighs","miniskirt"],
+  "wet":["wet clothes","wet skin","clingy fabric","dripping"],
+  "partially undressed":["partially undressed","undressing","half off"],
+  "hands in waistband":["hands in waistband","pulling panties down"],
+  "back view":["back view","bare back","open back"],
+  "top pulled up":["shirt pulled up","exposed stomach","underboob"],
+  "bottom pulled aside":["panties pulled aside","visible pussy"],
+  "topless, bottoms on":["topless","bottoms on","bra removed"]
+};
+const COVER={
+  "nude":{tags:["completely nude","bare breasts","visible nipples","pussy","hairless pussy"]},
+  "topless":{tags:["topless","bare breasts","visible nipples","breasts out"]},
+  "bottomless":{tags:["bottomless","no panties","pussy","visible vulva","hairless pussy"]},
+  "underwear":{tags:["lingerie","matching underwear","breasts covered","cleavage","bare legs"]},
+  "clothed":{tags:["fully clothed","breasts covered","clothing","fabric detail"]},
+  "tease":{tags:["clothing","partially undressed","breasts covered","bare skin","flushed"]}
+};
 const PRESET={
-  outfit:["completely nude","topless","bottomless","bikini","one-piece swimsuit","panties","bra and panties",
-          "school uniform","towel","oversized t-shirt","sundress","thighhighs only","nude apron"],
+  outfit:Object.keys(OUTFIT),
   pose:["standing","sitting cross-legged","lying on back, legs spread","on all fours","kneeling",
         "legs raised in the air","lying on side","bending over","from behind","straddling",
         "spread eagle","arms above head","hands behind back","hands on hips","leaning against wall"],
@@ -693,9 +754,11 @@ function stopGen(){if(ABORT)ABORT.abort()}
 function buildPrompt(g,o){
   const p=["1girl","solo"];
   p.push(g.tg);
-  p.push(bodyTags(g,o.close));
-  if(o.outfit==="completely nude"||!o.outfit){p.push("completely nude","pussy")}
-  else{p.push(o.outfit,"nipples")}
+  const cov=o.cover||"nude";
+  p.push(bodyTags(g,o.close,cov));
+  p.push((COVER[cov]||COVER.nude).tags);
+  if(o.outfit&&o.outfit!=="none (nude)"&&OUTFIT[o.outfit])p.push("wearing "+o.outfit,OUTFIT[o.outfit]);
+  if(o.reveal&&o.reveal!=="none")p.push(REVEAL[o.reveal]||o.reveal);
   if(o.detail)p.push(o.detail);
   if(o.pose)p.push(o.pose);
   if(o.setting)p.push(o.setting);
@@ -721,6 +784,8 @@ function imgDialog(){
     <div style="font-size:11px;color:#787890;margin-bottom:10px">Body tags auto-fill per her age. Everything editable below. Venice caps steps at 30.</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div><label style="${lb}">Outfit</label><select id="iOutfit" style="${st}">${opt(PRESET.outfit)}</select></div>
+      <div><label style="${lb}">Coverage</label><select id="iCover" style="${st}">${opt(Object.keys(COVER))}</select></div>
+      <div><label style="${lb}">Reveal / tease</label><select id="iReveal" style="${st}">${opt(Object.keys(REVEAL))}</select></div>
       <div><label style="${lb}">Pose</label><select id="iPose" style="${st}">${opt(PRESET.pose)}</select></div>
       <div><label style="${lb}">Setting</label><select id="iSet" style="${st}">${opt(PRESET.setting)}</select></div>
       <div><label style="${lb}">Lighting</label><select id="iLight" style="${st}">${opt(PRESET.light)}</select></div>
@@ -748,7 +813,7 @@ function imgDialog(){
     </div>
   </div>`;
   document.body.appendChild(d);
-  ["iOutfit","iPose","iSet","iLight","iCam","iDetail","iAnchor","iExtra","iSize","iClose"].forEach(id=>{
+  ["iOutfit","iCover","iReveal","iPose","iSet","iLight","iCam","iDetail","iAnchor","iExtra","iSize","iClose"].forEach(id=>{
     const el=d.querySelector("#"+id);
     el.addEventListener("change",imgRebuild);
     el.addEventListener("input",imgRebuild);
@@ -757,8 +822,11 @@ function imgDialog(){
 function imgRebuild(){
   if(!S.active||S.active==="group")return;
   const g=G(S.active);
+  if(iOutfit.value==="none (nude)")iCover.value="nude";
+  else if(iCover.value==="nude")iCover.value="clothed";
   document.getElementById("iPrompt").value=buildPrompt(g,{
-    outfit:iOutfit.value,pose:iPose.value,setting:iSet.value,
+    outfit:iOutfit.value,cover:iCover.value,reveal:iReveal.value,
+    pose:iPose.value,setting:iSet.value,
     light:iLight.value,camera:iCam.value,extra:iExtra.value,
     detail:iDetail.value,anchor:iAnchor.value,close:iClose.value==="1"
   });
@@ -783,7 +851,7 @@ async function imgGo(){
     let ex=null,j=null;
     for(let attempt=0;attempt<4;attempt++){
       const bd=JSON.parse(req.body);
-      if(attempt)bd.seed=Math.floor(Math.random()*999999999);
+      if(attempt){bd.seed=Math.floor(Math.random()*999999999);bd.cfg_scale=Math.max(4,(+bd.cfg_scale||6.5)-(attempt*0.5));}
       const r=await fetch(req.url,{method:"POST",headers:req.headers,body:JSON.stringify(bd)});
       const raw=await r.text();
       if(!r.ok)throw new Error(r.status+" "+raw.slice(0,300));
