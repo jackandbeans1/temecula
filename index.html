@@ -414,7 +414,7 @@ function modelType(m){
   ).toLowerCase();
 }
 async function listModels(base,key,type){
-  const r=await fetch(base.replace(/\/$/,"")+"/models",{headers:key?{Authorization:"Bearer "+key}:{}});
+  const r=await fetch(base.replace(/\/$/,"")+"/models"+(type?"?type="+type:""),{headers:key?{Authorization:"Bearer "+key}:{}});
   if(!r.ok)throw new Error(r.status+" "+(await r.text()).slice(0,180));
   const j=await r.json();
   const all=Array.isArray(j.data)?j.data:(Array.isArray(j)?j:[]);
@@ -427,7 +427,7 @@ async function listModels(base,key,type){
     return all.filter(m=>{const mt=modelType(m);return mt && mt!=="text" && mt!=="embedding"})
               .map(m=>(m.id||m.name||"")).filter(Boolean).sort();
   }
-  return [];
+  return ids;
 }
 
 // ── STREAMING CHAT CALL ────────────────────────────────────────────────
