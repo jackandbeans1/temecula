@@ -750,6 +750,29 @@ async function chatWithFallback(sys,hist,onToken){
 function stopGen(){if(ABORT)ABORT.abort()}
 
 /* ── IMAGE PROMPT BUILDER — deduped, detail-max ──────────────────────── */
+function capPrompt(prompt, budget){
+  budget = budget || 72;
+  var seen = {}, out = [];
+  String(prompt).split(',').forEach(function(raw){
+    var t = raw.trim(); if (!t) return;
+    var k = t.toLowerCase(); if (seen[k]) return; seen[k] = 1; out.push(t);
+  });
+  var est = function(a){ var n = 2; for (var i=0;i<a.length;i++) n += a[i].split(/\s+/).length + 1; return n; };
+  var STYLE = ['anime illustration','very aesthetic','absurdres','4k'];
+  var guard = 0;
+  while (out.length > 6 && est(out) > budget && guard++ < 200){
+    var idx = -1;
+    for (var i = out.length - 1; i >= 0; i--){
+      if (STYLE.indexOf(out[i].toLowerCase()) < 0) { idx = i; break; }
+    }
+    if (idx < 0) idx = out.length - 1;
+    out.splice(idx, 1);
+  }
+  return out.join(', ');
+}
+if (typeof NEG === 'string' && NEG.indexOf('mosaic censoring') < 0) {
+  NEG += ', mosaic censoring, bar censor, censorship, worst quality, low quality, lowres, jpeg artifacts, watermark, signature, text';
+}
 function buildPrompt(g,o){
   const p=["1girl","solo"];
   p.push(g.tg);
