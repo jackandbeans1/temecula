@@ -327,7 +327,7 @@ const IMG_P={
   venice:{
     label:"Venice · wai-Illustrious (PNG)",
     build:(base,key,p,S)=>{
-      const full=p+", "+TAIL;
+      const full=dedupe(p+", "+TAIL);
       const clamp=(v,d)=>{v=Math.round((+v||d)/LIM.dimStep)*LIM.dimStep;
         return Math.max(LIM.minDim,Math.min(LIM.maxDim,v))};
       return {
@@ -355,7 +355,7 @@ const IMG_P={
       headers:{"Content-Type":"application/json",...(key?{Authorization:"Bearer "+key}:{})},
       body:JSON.stringify({
         model:"qwen-image",
-        prompt:p+", "+TAIL,
+        prompt:dedupe(p+", "+TAIL),
         negative_prompt:NEG,
         aspect_ratio:(S.iw>S.ih?"3:4":(S.iw<S.ih?"3:4":"1:1")),
         steps:Math.max(1,Math.min((/wai/i.test(S.im||"wai-Illustrious")?30:50),+S.steps||30)),
@@ -388,7 +388,7 @@ const IMG_P={
     build:(base,key,p,S)=>({
       url:base.replace(/\/$/,"")+"/images/generations",
       headers:{"Content-Type":"application/json",...(key?{Authorization:"Bearer "+key}:{})},
-      body:JSON.stringify({model:S.im||"gpt-image-1",prompt:p+", "+TAIL,size:"1024x1536",n:1,response_format:"b64_json"}),
+      body:JSON.stringify({model:S.im||"gpt-image-1",prompt:dedupe(p+", "+TAIL),size:"1024x1536",n:1,response_format:"b64_json"}),
       parse:j=>j.data?.[0]?.b64_json, mime:"image/png"
     })
   },
@@ -574,12 +574,12 @@ function renderMsgs(){
   const el=document.getElementById("msgs");
   el.innerHTML=(S.chats[S.active]||[]).map(m=>m.r==="sys"
     ?`<div class="m sys">${esc(m.t)}</div>`
-    :`<div class="m ${m.r}">${m.who?`<div class="who">${esc(m.who)}</div>`:""}${esc(m.t)}${m.img?`<img src="${m.img}">`:""}</div>`).join("");
+    :`<div class="m ${m.r}">${m.who?`<div class="who">${esc(m.who)}</div>`:""}${esc(m.t)}${(m.imgKey||m.img)?`<img src="${IMG(m.imgKey||m.img)}">`:""}</div>`).join("");
   el.scrollTop=el.scrollHeight;
 }
 function renderGal(){
   const g=S.gal[S.active]||[];
-  document.getElementById("gal").innerHTML=g.map(u=>`<img src="${u}" onclick="window.open('${u}')">`).join("");
+  document.getElementById("gal").innerHTML=g.map(u=>{const s=IMG(u);return `<img src="${s}" onclick="window.open('${s}')">`}).join("");
 }
 
 /* ── OPERATOR ────────────────────────────────────────────────────────── */
