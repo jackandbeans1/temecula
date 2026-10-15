@@ -335,7 +335,7 @@ const IMG_P={
           negative_prompt:NEG,
           width:clamp(S.iw,832),
           height:clamp(S.ih,1216),
-          steps:Math.max(1,Math.min(LIM.steps,+S.steps||30)),
+          steps:Math.max(1,Math.min((/wai/i.test(S.im||"wai-Illustrious")?30:50),+S.steps||30)),
           cfg_scale:Math.max(1,Math.min(20,+S.cfg||6.5)),
           format:"png"          // ← webp returns a black frame above 512px
         }),
@@ -354,7 +354,7 @@ const IMG_P={
         prompt:p+", "+TAIL,
         negative_prompt:NEG,
         aspect_ratio:(S.iw>S.ih?"3:4":(S.iw<S.ih?"3:4":"1:1")),
-        steps:Math.max(1,Math.min(LIM.steps,+S.steps||30)),
+        steps:Math.max(1,Math.min((/wai/i.test(S.im||"wai-Illustrious")?30:50),+S.steps||30)),
         cfg_scale:Math.max(1,Math.min(20,+S.cfg||6.5)),
         format:"png"
       }),

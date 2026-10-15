@@ -92,7 +92,7 @@ h4{margin:16px 0 2px;font-size:12.5px;color:var(--acc2)}
   <label>Image provider</label><select id="sIP"></select>
   <label>Image base</label><input id="sIB" placeholder="https://api.venice.ai/api/v1">
   <label>Image key</label><input id="sIK" type="password">
-  <label>Image model</label><input id="sIM" placeholder="wai-illu">
+  <label>Image model</label><input id="sIM" placeholder="wai-Illustrious">
 
   <h4>You</h4>
   <label>Your name</label><input id="sName" placeholder="operator">
@@ -330,7 +330,7 @@ const IMG_P={
         url:base.replace(/\/$/,"")+"/image/generate",
         headers:{"Content-Type":"application/json",...(key?{Authorization:"Bearer "+key}:{})},
         body:JSON.stringify({
-          model:S.im||"wai-Illustrious",
+          safe_mode:false,hide_watermark:true,model:S.im||"wai-Illustrious",
           prompt:full,
           negative_prompt:NEG,
           width:clamp(S.iw,832),
@@ -455,7 +455,7 @@ async function streamChat({base,key,model,messages,temp,onToken,signal}){
    ═══════════════════════════════════════════════════════════════════════ */
 
 const DEF={
-  cp:"venice",cb:"https://api.venice.ai/api/v1",ck:"",cm:"venice-uncensored",
+  cp:"venice",cb:"https://api.venice.ai/api/v1",ck:"",cm:"venice-uncensored-1-2",
   ip:"venice",ib:"https://api.venice.ai/api/v1",ik:"",im:"wai-Illustrious",
   fb:"venice,openrouter,ollama",temp:0.95,
   steps:30,cfg:6.5,iw:832,ih:1216,
@@ -469,7 +469,7 @@ if(!S.op)S.op=JSON.parse(JSON.stringify(DEF.op));
 if(!S.opRel)S.opRel={};
 ["steps","cfg","iw","ih"].forEach(k=>{if(S[k]==null)S[k]=DEF[k]});
 if(S.steps>30)S.steps=30;
-const save=()=>localStorage.setItem(LS,JSON.stringify(S));
+const save=()=>{try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){console.warn("save fail",e.message)}};
 const G=id=>GIRLS.find(g=>g.id===id);
 const esc=s=>String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
 let ABORT=null;
