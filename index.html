@@ -104,6 +104,7 @@ h4{margin:16px 0 2px;font-size:12.5px;color:var(--acc2)}
 
   <div class="row"><button class="pri" onclick="saveSet()">Save</button><button onclick="closeSet()">Cancel</button><button onclick="nuke()" style="margin-left:auto">Nuke</button></div>
 </div></div>
+<script src="imgstore.js"></script>
 <script>
 const TEMECULA = `
 TEMECULA, CA — real local knowledge. Drop it in naturally, never info-dump.
@@ -773,8 +774,8 @@ async function imgGo(){
   if(!p){alert("empty prompt");return}
   const [w,h]=(iSize.value||"832x1216").split("x").map(Number);
   document.getElementById("imgdlg").style.display="none";
-  S.chats[S.active].push({r:"sys",t:"[gen] "+p});save();renderMsgs();
-  try{
+  S.chats[S.active].push({r:"sys",t:"[gen] "+p});renderMsgs();
+  try{ save();
     const c=credsImg(),P=IMG_P[S.ip||"venice"];
     const st=Object.assign({},S,{iw:w,ih:h});
     const req=P.build(c.base,c.key,p,st);
@@ -787,8 +788,10 @@ async function imgGo(){
     console.log("[img] keys:",Object.keys(j),"| extracted:",ex?(ex.url?("URL"):("b64 len "+ex.b64.length)):"NULL");
     if(!ex)throw new Error("no image field. keys="+Object.keys(j).join(","));
     const url=ex.url?ex.url:`data:${req.mime};base64,${ex.b64}`;
-    (S.gal[S.active]=S.gal[S.active]||[]).unshift(url);
-    S.chats[S.active].push({r:"a",t:"",img:url});save();renderMsgs();renderGal();
+    if(ex.b64&&ex.b64.length<8000)console.warn("[img] small payload",ex.b64.length);
+    const ikey=await imgSave(url);
+    (S.gal[S.active]=S.gal[S.active]||[]).unshift(ikey);
+    S.chats[S.active].push({r:"a",t:"",imgKey:ikey});save();renderMsgs();renderGal();
   }catch(e){S.chats[S.active].push({r:"a",t:"[img err] "+e.message});save();renderMsgs()}
 }
 
