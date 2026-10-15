@@ -1,4 +1,4 @@
-﻿const IMGC = {};
+const IMGC = {};
 let _db = null;
 function dbOpen(){
   return new Promise((res,rej)=>{
@@ -33,7 +33,7 @@ async function imgHydrate(){
     for(const g in S.gal){ const a=S.gal[g]||[]; for(let i=0;i<a.length;i++){ if(a[i]&&a[i].startsWith("data:")){ a[i]=await imgSave(a[i]); n++; } } }
     for(const g in S.chats){ for(const m of (S.chats[g]||[])){ if(m.img&&m.img.startsWith("data:")){ m.imgKey=await imgSave(m.img); delete m.img; n++; } } }
     if(n){ save(); console.log("[idb] migrated "+n+" images out of localStorage"); }
-    console.log("[idb] ready - "+keys.length+" stored");
+    console.log("[idb] ready - "+Object.keys(IMGC).length+" cached");
     if(S.active && S.active!=="group"){ renderMsgs(); renderGal(); }
   }catch(e){ console.warn("idb hydrate",e); }
 }
