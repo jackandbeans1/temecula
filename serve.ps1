@@ -1,13 +1,18 @@
 [CmdletBinding()]
-param([int]$Port = 8080)
+param([int]$Port = 8080, [string]$KeyFile = ".dev.vars")
+
 $ErrorActionPreference = 'Stop'
-$py = Get-Command python -ErrorAction SilentlyContinue
-if (-not $py) { throw 'python not on PATH' }
-$ip = (Get-NetIPAddress -AddressFamily IPv4 |
-       Where-Object { $_.IPAddress -notmatch '^(127\.|169\.254\.)' -and $_.PrefixOrigin -ne 'WellKnown' } |
-       Select-Object -First 1).IPAddress
-"local   http://localhost:$Port"
-"phone   http://${ip}:$Port"
-"ctrl-c to stop"
-Push-Location $PSScriptRoot
-try { & python -m http.server $Port --bind 0.0.0.0 } finally { Pop-Location }
+Set-Location $PSScriptRoot
+
+if (-not (Get-Command node -ErrorAction SilentlyContinue)) { throw "node not on PATH" }
+
+if (Test-Path $KeyFile) {
+  Get-Content $KeyFile | Where-Object { $_ -match '^\s*[A-Z_]+\s*=' } | ForEach-Object {
+    $n, $v = $_ -split '=', 2
+    Set-Item -Path "env:$($n.Trim())" -Value $v.Trim()
+  }
+  Write-Host "loaded $KeyFile" -ForegroundColor DarkGray
+}
+
+$env:PORT = $Port
+node dev-proxy.mjs
