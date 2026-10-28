@@ -1,4 +1,6 @@
 (function(){
+  if(window.__errInstalled) return;
+  window.__errInstalled = 1;
   function show(msg){
     try{
       document.title = 'ERR ' + msg;
@@ -16,7 +18,7 @@
   window.addEventListener('load', function(){
     setTimeout(function(){
       if (typeof window.DEF === 'undefined' && typeof window.S === 'undefined' && typeof window.capPrompt === 'undefined'){
-        show('App script did not finish - DEF/S/capPrompt all undefined (silent abort, no error event).');
+        show('App script did not finish - DEF/S/capPrompt all undefined.');
       }
     }, 600);
   });
