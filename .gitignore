@@ -1,2 +1,6 @@
-*.bak
-*.txt
+node_modules/
+.dev.vars
+.wrangler/
+*.log
+.DS_Store
+Thumbs.db
