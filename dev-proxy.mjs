@@ -2,6 +2,7 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
+import os from 'node:os';
 
 const ROOT = process.cwd();
 const PORT = Number(process.env.PORT ?? 8080);
