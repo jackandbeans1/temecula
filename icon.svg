@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <rect width="192" height="192" rx="42" fill="#0a0a0f"/>
+  <circle cx="96" cy="86" r="46" fill="none" stroke="#ff2d78" stroke-width="9"/>
+  <path d="M50 96c0 26 20 46 46 46s46-20 46-46" fill="none" stroke="#00e5ff" stroke-width="9" stroke-linecap="round"/>
+  <text x="96" y="102" font-family="system-ui,sans-serif" font-size="34" font-weight="800" fill="#e9e9f2" text-anchor="middle">T</text>
+</svg>
